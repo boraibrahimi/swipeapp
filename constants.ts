@@ -1,7 +1,7 @@
 import { Principle } from './types';
 
-// Generate 150 placeholder principles
-export const PRINCIPLES_LIST: Principle[] = Array.from({ length: 150 }, (_, i) => ({
+// Generate 50 placeholder principles
+export const PRINCIPLES_LIST: Principle[] = Array.from({ length: 50 }, (_, i) => ({
   id: `principle-${i + 1}`,
   text: `Principle #${i + 1}`,
   category: i % 3 === 0 ? 'Ethics' : i % 3 === 1 ? 'Strategy' : 'Operations'

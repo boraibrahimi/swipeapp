@@ -30,6 +30,14 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({ userName, onComplete }) =>
     }
   }, [userName]);
 
+  const updateStorage = (newDecisions: Record<string, Decision>) => {
+     localStorage.setItem(`${STORAGE_KEY_PREFIX}${userName}`, JSON.stringify({
+      userName,
+      decisions: newDecisions,
+      lastUpdated: new Date().toISOString()
+    }));
+  };
+
   const handleSwipe = useCallback((direction: SwipeDirection) => {
     const currentPrinciple = PRINCIPLES_LIST[currentIndex];
     if (!currentPrinciple) return;
@@ -39,13 +47,7 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({ userName, onComplete }) =>
     // Optimistic Update
     const newDecisions = { ...decisions, [currentPrinciple.id]: decision };
     setDecisions(newDecisions);
-    
-    // Persist immediately
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${userName}`, JSON.stringify({
-      userName,
-      decisions: newDecisions,
-      lastUpdated: new Date().toISOString()
-    }));
+    updateStorage(newDecisions);
 
     // Move next
     const nextIndex = currentIndex + 1;
@@ -57,9 +59,22 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({ userName, onComplete }) =>
     }
   }, [currentIndex, decisions, userName, onComplete]);
 
+  const handleUndo = useCallback(() => {
+    if (currentIndex === 0) return;
+
+    const prevIndex = currentIndex - 1;
+    const prevPrinciple = PRINCIPLES_LIST[prevIndex];
+    
+    // Remove the decision
+    const newDecisions = { ...decisions };
+    delete newDecisions[prevPrinciple.id];
+    
+    setDecisions(newDecisions);
+    setCurrentIndex(prevIndex);
+    updateStorage(newDecisions);
+  }, [currentIndex, decisions, userName]);
+
   // Render logic: Only render top 3 cards
-  // We slice 3 cards, then reverse them so the first one in the array (currentIndex) 
-  // is rendered LAST in the DOM (on top visually)
   const visiblePrinciples = PRINCIPLES_LIST.slice(currentIndex, currentIndex + 3);
 
   // Helper for manual buttons
@@ -73,11 +88,28 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({ userName, onComplete }) =>
     <div className={`flex flex-col h-screen ${THEME.colors.background} overflow-hidden`}>
       {/* Header / Progress */}
       <div className="px-6 pt-6 pb-2 z-50">
-        <div className="flex justify-between items-end mb-2">
-          <h3 className="text-slate-400 text-sm font-medium tracking-wider">PROGRESS</h3>
-          <span className="text-slate-200 font-mono text-sm">
-            {currentIndex} / {PRINCIPLES_LIST.length}
-          </span>
+        <div className="flex justify-between items-end mb-4">
+          {/* Undo Button */}
+          <button 
+            onClick={handleUndo}
+            disabled={currentIndex === 0}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+              currentIndex === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 14 4 9l5-5"/>
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+            </svg>
+            Undo
+          </button>
+
+          <div className="text-right">
+            <h3 className="text-slate-400 text-xs font-medium tracking-wider mb-1">PROGRESS</h3>
+            <span className="text-slate-200 font-mono text-sm">
+              {currentIndex} / {PRINCIPLES_LIST.length}
+            </span>
+          </div>
         </div>
         <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
           <div 
@@ -102,13 +134,13 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({ userName, onComplete }) =>
           
           {visiblePrinciples.length === 0 && (
             <div className="flex items-center justify-center h-full text-slate-500">
-              Processing results...
+              Preparing prioritization...
             </div>
           )}
         </div>
       </div>
 
-      {/* Manual Controls (Accessibility/Mobile fallback) */}
+      {/* Manual Controls */}
       <div className="px-8 pb-10 pt-4 flex gap-6 justify-center z-50 max-w-md mx-auto w-full">
         <Button 
           variant="outline" 
